@@ -1,7 +1,7 @@
 // Main \\
 
 const { encrypt, setup, decrypt, dc_call } = require("./functions");
-const FormData = require("form-data")
+const FormData = require("form-data");
 const {
   MessageTooLargeError,
   InvalidTokenError,
@@ -11,12 +11,18 @@ const {
 } = require("./errors");
 
 class UDB {
-  constructor(token, encryption_key, channel_id, img_channel = null, showChorddbMessage = true) {
+  constructor(
+    token,
+    encryption_key,
+    channel_id,
+    img_channel = null,
+    showChorddbMessage = true,
+  ) {
     this.token = token;
     this.enc_key = encryption_key;
     this.ch_id = channel_id;
     this.isStarted = false;
-    this.images = img_channel
+    this.images = img_channel;
     this.debugShow = showChorddbMessage;
   }
 
@@ -167,20 +173,22 @@ class UDB {
   }
 
   async sendImg(name, key, buffer) {
-    let Form = new FormData()
-    this._checkStarted()
+    let Form = new FormData();
+    this._checkStarted();
 
     if (!this.images) {
       throw new InvalidImageChannel();
     }
 
-    Form.append("file", buffer, name)
-    Form.append("payload_json", JSON.stringify({
-      content: key
-    }))
+    Form.append("file", buffer, name);
+    Form.append(
+      "payload_json",
+      JSON.stringify({
+        content: key,
+      }),
+    );
 
-
-    const res = await dc_call(`/channels/${this.ch_id}/messages`, "POST", Form)
+    const res = await dc_call(`/channels/${this.ch_id}/messages`, "POST", Form);
 
     return res;
   }
@@ -197,11 +205,11 @@ class UDB {
     if (res) {
       for (const msg of res) {
         if (msg.content === key) {
-          return msg.attachments[0]
+          return msg.attachments[0];
         }
       }
     } else {
-      return null
+      return null;
     }
   }
 }

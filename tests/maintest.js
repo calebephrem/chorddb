@@ -27,15 +27,19 @@ async function test() {
   const verify = await db.find({ key: "id", value: 1 });
   console.log("Updated item:", verify);
 
-  console.log("\n --- Test Image Write ---")
-  const imgWriteResult = await db.sendImg("verycoolimg.png", "coolimage", Buffer.from(path.join(__dirname, "/image.png")));
+  console.log("\n --- Test Image Write ---");
+  const imgWriteResult = await db.sendImg(
+    "verycoolimg.png",
+    "coolimage",
+    Buffer.from(path.join(__dirname, "/image.png")),
+  );
 
-  console.log(imgWriteResult)
+  console.log(imgWriteResult);
 
-    console.log("\n --- Test Image Write ---")
+  console.log("\n --- Test Image Write ---");
   const imgReadResult = await db.findImg("coolimage");
 
-  console.log(imgReadResult)
+  console.log(imgReadResult);
 }
 
 test();
