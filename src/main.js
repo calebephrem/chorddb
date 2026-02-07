@@ -1,19 +1,29 @@
 // Main \\
 
 const { encrypt, setup, decrypt, dc_call } = require("./functions");
+const FormData = require("form-data");
 const {
   MessageTooLargeError,
   InvalidTokenError,
   InvalidChannelIdError,
   ChordDBNotStartedError,
+  InvalidImageChannel,
 } = require("./errors");
 
 class UDB {
-  constructor(token, encryption_key, channel_id) {
+  constructor(
+    token,
+    encryption_key,
+    channel_id,
+    img_channel = null,
+    showChorddbMessage = true,
+  ) {
     this.token = token;
     this.enc_key = encryption_key;
     this.ch_id = channel_id;
     this.isStarted = false;
+    this.images = img_channel;
+    this.debugShow = showChorddbMessage;
   }
 
   async start() {
@@ -23,24 +33,30 @@ class UDB {
     const channel_info = await dc_call(`/channels/${this.ch_id}`);
 
     if (user_info.id) {
-      console.log(
-        `\x1b[32m chorddb: connected as ${user_info.username}\x1b[0m`,
-      );
+      if (this.debugShow) {
+        console.log(
+          `\x1b[32m chorddb: connected as ${user_info.username}\x1b[0m`,
+        );
+      }
     } else {
       console.error(new InvalidTokenError());
       process.exit();
     }
 
     if (channel_info.id) {
-      console.log(
-        `\x1b[32m chorddb: linked to channel ${channel_info.name}\x1b[0m`,
-      );
+      if (this.debugShow) {
+        console.log(
+          `\x1b[32m chorddb: linked to channel ${channel_info.name}\x1b[0m`,
+        );
+      }
     } else {
       console.error(new InvalidChannelIdError());
       process.exit();
     }
 
-    console.log("chorddb: ChordDB is Ready.");
+    if (this.debugShow) {
+      console.log("chorddb: ChordDB is Ready.");
+    }
     this.isStarted = true;
   }
 
@@ -58,8 +74,7 @@ class UDB {
     const enc_data = encrypt(data);
 
     if (enc_data.length > 2000) {
-      console.error(new MessageTooLargeError());
-      return true;
+      throw new MessageTooLargeError();
     }
 
     const r = await dc_call(`/channels/${this.ch_id}/messages`, "POST", {
@@ -147,17 +162,56 @@ class UDB {
     msgs = await dc_call(`/channels/${this.ch_id}/messages`);
 
     for (const msg of msgs) {
-      final.push(JSON.parse(decrypt(msg.content)));
+      final.push(JSON.parse(decrypt(msg.content.toString())));
     }
 
-    if (final == []) {
+    if (final.length === 0) {
       return null;
     } else {
       return final;
     }
   }
+
+  async sendImg(name, key, buffer) {
+    let Form = new FormData();
+    this._checkStarted();
+
+    if (!this.images) {
+      throw new InvalidImageChannel();
+    }
+
+    Form.append("file", buffer, name);
+    Form.append(
+      "payload_json",
+      JSON.stringify({
+        content: key,
+      }),
+    );
+
+    const res = await dc_call(`/channels/${this.ch_id}/messages`, "POST", Form);
+
+    return res;
+  }
+
+  async findImg(key) {
+    this._checkStarted();
+
+    if (!this.images) {
+      throw new InvalidImageChannel();
+    }
+
+    const res = await dc_call(`/channels/${this.ch_id}/messages`);
+
+    if (res) {
+      for (const msg of res) {
+        if (msg.content === key) {
+          return msg.attachments[0];
+        }
+      }
+    } else {
+      return null;
+    }
+  }
 }
 
-module.exports = {
-  UDB,
-};
+module.exports = UDB;

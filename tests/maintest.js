@@ -1,10 +1,11 @@
-const { UDB } = require("../src/main");
+const path = require("path");
+const UDB = require("../src/main");
 
-const db = new UDB("TOKEN", "ENCRYPTION_KEY", "CHANNEL_ID");
-
-db.start();
+const db = new UDB("TOKEN", "ENCRYPTION_KEY", "CHANNEL_ID", true);
 
 async function test() {
+  await db.start();
+
   console.log("\n--- TESTING WRITE ---");
   const testData = { id: 1, name: "Test Item", value: 100 };
   const writeResult = await db.write(testData);
@@ -25,6 +26,20 @@ async function test() {
   console.log("\n--- VERIFY EDIT ---");
   const verify = await db.find({ key: "id", value: 1 });
   console.log("Updated item:", verify);
+
+  console.log("\n --- Test Image Write ---");
+  const imgWriteResult = await db.sendImg(
+    "verycoolimg.png",
+    "coolimage",
+    Buffer.from(path.join(__dirname, "/image.png")),
+  );
+
+  console.log(imgWriteResult);
+
+  console.log("\n --- Test Image Write ---");
+  const imgReadResult = await db.findImg("coolimage");
+
+  console.log(imgReadResult);
 }
 
 test();

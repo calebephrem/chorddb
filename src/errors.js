@@ -23,6 +23,13 @@ class InvalidChannelIdError extends Error {
   }
 }
 
+class InvalidImageChannel extends Error {
+  constructor() {
+    super("Invalid Images channel Id");
+    this.name = "InvalidImageChannel";
+  }
+}
+
 class ChordDBNotStartedError extends Error {
   constructor() {
     super("ChordDB not started");
@@ -35,4 +42,5 @@ module.exports = {
   InvalidChannelIdError,
   InvalidTokenError,
   ChordDBNotStartedError,
+  InvalidImageChannel,
 };

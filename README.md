@@ -8,7 +8,7 @@
 
 Chorddb is a simple, lightweight package which is a database like MongoDB which uses Discord as storage with encryption. It works with JSON data.
 
-**NEXT UPDATE**: Image Upload (Will only work with Buffer)
+**NEXT UPDATE**: Docs for image upload.
 
 # Docs
 
