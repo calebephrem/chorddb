@@ -1,88 +1,195 @@
+# ChordDB
+
 <p align="center">
-    <img src="https://raw.githubusercontent.com/imiakk/chorddb/refs/heads/main/assets/ChordDB%20logo.png">
+  <img src="https://raw.githubusercontent.com/imiakk/chorddb/refs/heads/main/assets/ChordDB%20logo.png" />
 </p>
 
 ![Built with Node.js](https://img.shields.io/badge/Built%20with-Node.js-green?logo=node.js&style=for-the-badge)
-![Built with Axios](https://img.shields.io/badge/Built%20with-Axios-blue?logo=axios&style=for-the-badge)
+![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue?logo=typescript&style=for-the-badge)
 ![npm](https://img.shields.io/npm/v/chorddb?style=for-the-badge)
 
-Chorddb is a simple, lightweight package which is a database like MongoDB which uses Discord as storage with encryption. It works with JSON data.
+**ChordDB** is a lightweight, MongoDB-inspired database that uses **Discord channels as storage**, with **end-to-end encryption** and optional **wrapper-based caching** for performance.
 
-**NEXT UPDATE**: Docs for image upload.
+It is designed primarily for **bots, prototypes, and small-scale systems** where simplicity and zero external infrastructure matter.
 
-# Docs
+## Features
 
-### **1.1 Installation**
+- 📦 Discord messages as database records (1 message = 1 document)
+- 🔐 AES-GCM encryption using Node.js `crypto`
+- 🧠 Mongo-like query & update operators (`$set`, `$inc`, `$unset`, `$push`)
+- ⚡ Cache-aware fetching (recommended with Discord API wrappers)
+- 🧩 ESM-first with CJS support
+- 🧪 Works with plain JSON data
 
-#### Install with npm
+## Installation
 
-```
+### npm
+
+```bash
 npm install chorddb
 ```
 
-### **1.2 Importing ChordDB**
+## Importing
 
-#### Working with ChordDB
-
-Start by importing ChordDB
+### ESM (recommended)
 
 ```js
-const { UDB } = require("chorddb");
+import { Chord } from "chorddb";
 ```
 
-### **1.3 Initialize**
-
-#### Define Values for ChordDB
+### CommonJS
 
 ```js
-const db = new UDB("TOKEN", "ENCRYPTION_KEY", "CHANNEL_ID");
+const { Chord } = require("chorddb");
 ```
 
-**IMPORTANT:** Be sure to call your DB and start it by:
+## Initialization
 
-```js
-db.start();
+### Create a Chord instance
+
+```ts
+import { Chord, getKey } from "chorddb";
+
+const chord = new Chord({
+	token: "YOUR_BOT_TOKEN",
+	key: getKey("YOUR_ENCRYPTION_KEY_OR_PASSWORD"),
+	collections: [
+		{ name: "users", channelId: "1469947881367797825" },
+		{ name: "guilds", channelId: "1469947881367797826" },
+	],
+});
 ```
 
-### **1.4 Functions**
+> [!NOTE]  
+> You can optionally provide a Discord API wrapper (discord.js, oceanic, bakit, etc.)
+> to enable **cache-based reads** and reduce REST usage.
 
-- **write(data):** To write data to the channel. Returns true / false.
-- **read():** To read all the data in the channel. Returns data / false.
-- **find(identifier):** Takes a list, [KEY, VALUE]. Returns data / false.
-- **edit(identifier, modification):** Takes a list, [KEY, VALUE] to find, Another list to change value [KEY, VALUE]. Returns true / false.
+### Use with Discord API wrappers
 
-### **1.5 Example usage**
+```ts
+import { Chord } from "chorddb";
+import { Client, GatewayIntentBits } from "discord.js";
 
-```js
-const { UDB } = require("chorddb");
+const client = new Client({
+	intents: [
+		GatewayIntentBits.Guilds,
+		GatewayIntentBits.GuildMessages,
+		GatewayIntentBits.MessageContent,
+	],
+});
 
-const db = new UDB("YOUR_DISCORD_TOKEN", "ENCRYPTION_KEY", "CHANNEL_ID");
+const chord = new Chord({
+	token: "YOUR_BOT_TOKEN",
+	key: getKey("YOUR_ENCRYPTION_KEY_OR_PASSWORD"),
+	collections: [...]
+});
 
-(async () => {
-	await db.start();
+// Listen for gateway payloads to make sure the cache is up-to-date
+client.on("raw", (payload) => chord.updateGatewayPayload(payload));
 
-	const writeSuccess = await db.write({
-		key: "user123",
-		name: "Someone",
-		coins: 100,
-	});
-	console.log("Write successful?", writeSuccess);
+// Enable wrapper mode for caching
+// You can either use await it or just let it run
+await chord.useWrapper();
 
-	const user = await db.find({ key: "key", value: "user123" });
-	console.log("Found user:", user);
-
-	const editSuccess = await db.edit(["key", "user123"], ["coins", 150]);
-	console.log("Edit successful?", editSuccess);
-
-	const allData = await db.read();
-	console.log("All data in DB:", allData);
-})();
+await client.login("YOUR_BOT_TOKEN");
 ```
 
-## Contributing & Bugs
+### Create / Access a Collection
 
-For bugs & Contributing make a Pull Request and ill try to respond as fast as possible.
+```ts
+const users = chord.collect("users");
+const guilds = chord.collect("guilds");
+```
 
-## Licence
+## Basic Usage
 
-[MIT Licence](LICENCE)
+### Insert a document
+
+```ts
+await users.create({
+	username: "someone",
+	coins: 100,
+});
+```
+
+### Find documents
+
+```ts
+await users.findBy({
+	username: "someone",
+});
+
+await users.findById("123"); // ID is the message ID
+```
+
+or using a predicate:
+
+```ts
+const richUsers = await users.findBy((doc) => doc.coins > 500);
+```
+
+### Update documents
+
+```ts
+await users.updateBy(
+	{ username: "someone" },
+	{
+		$inc: { coins: 50 },
+		$set: { premium: true },
+	},
+);
+```
+
+### Fetch all documents
+
+```ts
+const allUsers = await users.findAll();
+```
+
+## Query & Update Operators
+
+### Supported filters
+
+- Object matching
+- Predicate functions
+
+### Supported update operators
+
+- `$set`
+- `$inc`
+- `$unset`
+- `$push`
+
+(Operator behavior is intentionally Mongo-like but simplified.)
+
+## Performance Notes
+
+- **Cache is optional but strongly recommended**
+- Without a wrapper cache, ChordDB falls back to paginated REST fetching
+- Fetching is lazy and incremental to avoid rate limits
+
+## Intended Use Cases
+
+- ✅ Prototype bots
+- ✅ Startup MVPs
+- ✅ Small persistent data needs
+- ⚠️ Not intended for high-write or large-scale production databases
+
+## Roadmap
+
+- Image / binary uploads
+- Indexing helpers
+- Better schema validation
+- Query optimization
+
+## Contributing
+
+Contributions are welcome! Please open an issue or pull request if you have any suggestions or find any bugs.
+
+Thanks to everyone who helps make ChordDB better!
+
+<div align="center">
+  <a href="https://github.com/open-devhub/chorddb/graphs/contributors">
+	<img src="https://contrib.rocks/image?repo=open-devhub/chorddb" />
+  </a>
+</div>
