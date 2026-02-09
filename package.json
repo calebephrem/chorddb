@@ -1,6 +1,6 @@
 {
 	"name": "chorddb",
-	"version": "1.0.0",
+	"version": "2.0.0",
 	"description": "Chorddb is a simple, lightweight package which is a database like MongoDB which uses Discord as storage with encryption. It works with JSON data.",
 	"type": "module",
 	"exports": {
